@@ -2,7 +2,7 @@
 
 This is a stub mirror. The full source code for this commit is at:
 
-https://git.bitcicle.com/andy/curseMenu/src/commit/03234930ae5cc46a67d96a7a632b53ed8c957f4e
+https://git.bitcicle.com/andy/curseMenu/src/commit/ece3a59926c6577cd57921cac42ad08b925a268f
 
 To browse or clone the full repository, visit:
 
