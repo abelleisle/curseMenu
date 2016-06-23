@@ -1,27 +1,121 @@
 #include <curseMenu.hpp>
 namespace curseMenu {
 	namespace dataEntry {
+		
 		template<class T>
 		T textBox(std::string caption)
 		{
-			(void)caption;
+			(void) caption;
 			T meme;
-			return meme;		
+			return meme;
 		}
-		
-		template<> int textBox<int>(std::string caption)
+
+		template <> std::string textBox<std::string>(std::string caption)
 		{
 			curseWindow box;
-   			box.createWindow(15, 15, 40, 10,  WINDOW_SHADOW | CURSES_KEYPAD);
-			box.setTitle(caption, WINDOW_TITLE_CENTERED);
+   			box.createWindow(15, 15, 80, 6,  WINDOW_SHADOW | CURSES_KEYPAD);
 			box.setBackground(COLOR_GREEN);
 			box.setTextColor(COLOR_BLACK);
 			
+			box.putText(1,2, caption);
+			mvwprintw(box.getWindow(), 4, 2, "________________________________________________________________________");
 			box.update();
-			getch();
+
+			char buf;
+			std::string out;
+			while (buf = getch()) {
+
+				if(buf == (char)KEY_BACKSPACE) {
+					out.pop_back();
+				} else if(buf == '\n') {
+					break;
+				} else {
+					out.push_back(buf);
+				}
+				mvwprintw(box.getWindow(), 4, 2, "____________________________________");
+				mvwprintw(box.getWindow(), 4, 2, out.c_str());
+				box.update();
+			}
 			box.destroy();
+			if (!out.size())
+				return 0;
+
+			return out;
+		}
+		
+		/// If we want to enter a float
+		template<> int textBox<int>(std::string caption)
+		{
+			curseWindow box;
+   			box.createWindow(15, 15, 40, 6,  WINDOW_SHADOW | CURSES_KEYPAD);
+			box.setBackground(COLOR_GREEN);
+			box.setTextColor(COLOR_BLACK);
 			
-			return 32;
+			box.putText(1,2, caption);
+			mvwprintw(box.getWindow(), 4, 2, "____________________________________");
+			box.update();
+
+			char buf;
+			std::string out;
+			while (buf = getch()) {
+				if (isdigit(buf)) {
+					out += buf;
+				} else if(buf == (char)KEY_BACKSPACE) {
+					out.pop_back();
+				} else if(buf == '\n') {
+					break;
+				}
+				mvwprintw(box.getWindow(), 4, 2, "____________________________________");
+				mvwprintw(box.getWindow(), 4, 2, out.c_str());
+				box.update();
+			}
+			box.destroy();
+			if (!out.size())
+				return 0;
+
+			std::string::size_type sz;	
+			return stoi(out, &sz);
+		}
+
+		///	If we want to enter a float
+		template<> float textBox<float>(std::string caption)
+		{
+			curseWindow box;
+   			box.createWindow(15, 15, 40, 6,  WINDOW_SHADOW | CURSES_KEYPAD);
+			box.setBackground(COLOR_GREEN);
+			box.setTextColor(COLOR_BLACK);
+			
+			box.putText(1,2, caption);
+			mvwprintw(box.getWindow(), 4, 2, "____________________________________");
+			box.update();
+
+			char buf;
+			std::string out;
+
+			int numDec = 0;
+			while (buf = getch()) {
+				if (isdigit(buf)) {
+					out += buf;
+				} else if (buf == '.' && !numDec) {
+					out += buf;
+					numDec++;
+				} else if (buf == (char)KEY_BACKSPACE) {
+					if (out.back() == '.')
+						numDec--;
+					out.pop_back();
+				} else if (buf == '\n') {
+					break;
+				}
+				mvwprintw(box.getWindow(), 4, 2, "____________________________________");
+				mvwprintw(box.getWindow(), 4, 2, out.c_str());
+				box.update();
+			}
+			box.destroy();
+			if (!out.size())
+				return 0;
+
+			std::string::size_type sz;	
+			return stof(out, &sz);
 		}
 		
 		template<class T> 
@@ -33,6 +127,7 @@ namespace curseMenu {
 			return meme;
 		}
 	}
+
 	uint __current_pair__ = 3;
 
 	// creation of the curses menu
@@ -74,6 +169,7 @@ namespace curseMenu {
 	// refresh the window
 	void globalUpdate()
 	{
+		bkgd(COLOR_PAIR(1));
 		refresh();
 	}
 
@@ -207,6 +303,11 @@ namespace curseMenu {
 		box(window, 0, 0);
 	}
 
+	WINDOW* curseWindow::getWindow()
+	{
+		return window;
+	}
+
 	// set the window title
 	void curseWindow::setTitle(std::string str, uint flags)
 	{
@@ -225,27 +326,33 @@ namespace curseMenu {
 		init_pair(pairIndex, textColor, backColor);
 		init_pair(effectIndex, backColor, highlightColor);
 		
-		if (shadow)
+		if (shadow) {
+			wbkgd(shadow, COLOR_PAIR(2));
 			wrefresh(shadow);
-
+		}
+		
 		//wbkgd(window, COLOR_PAIR(pairIndex));
 		box(window, 0, 0);
 
 		mvwprintw(window, getIdentifierY(), getIdentifierX(), getIdentifier().c_str());
 
-		int eIndexY = 0;	
+		int selAmt = 0;
 		for (auto &e : elements) {
-			if (selection.y == eIndexY) {
+			if (selection.y == e->getY() && selection.x == e->getX()) {
 				wattron(window, COLOR_PAIR(effectIndex));	
 				mvwprintw(window, e->getY(), e->getX(), e->getIdentifier().c_str());
 				wattroff(window, COLOR_PAIR(effectIndex));
 				resetColors();
+				selAmt++;
 			} else {
 				mvwprintw(window, e->getY(), e->getX(), e->getIdentifier().c_str());
 			}
-			eIndexY++;
 			
 			wrefresh(window);
+		}
+		if (!selAmt && elements.size()) {
+			selection.x = elements[0]->getX();
+			selection.y = elements[0]->getY();
 		}
 
 		for (auto &t : text) {
@@ -258,18 +365,24 @@ namespace curseMenu {
 			}
 			wrefresh(window);
 		}
+		
+				mvwprintw(window, 18, 0, std::to_string(selection.y).c_str());
+				mvwprintw(window, 19, 0, std::to_string(selection.x).c_str());
 		wrefresh(window);	
+	}
+
+	void curseWindow::clean()
+	{
+		wclear(window);
 	}
 
 	// TODO make this check for x location
 	void curseWindow::trigger()
 	{
-		int eIndexY = 0;
 		for (auto &e : elements) {
-			if (selection.y == eIndexY) {
+			if (selection.y == e->getY() && selection.x == e->getX()) {
 				e->trigger();
 			}
-			eIndexY++;
 		}
 	}
 
@@ -347,22 +460,78 @@ namespace curseMenu {
 
 	void curseWindow::movSelRight()
 	{
-		selection.x++;
+		// first is index
+		// second is disance
+		std::pair<int, int> closest = std::make_pair(0, 100);
+		int index = 0;
+		for (auto &e : elements) {
+			if (e->getX() > selection.x) {
+				int range = e->getX() - selection.x;
+				if (range < closest.second) {
+					closest = std::make_pair(index, range);
+				}
+			}
+			index++;
+		}
+		selection.x = elements[closest.first]->getX();
+		selection.y = elements[closest.first]->getY();
 	}
 
 	void curseWindow::movSelLeft()
 	{
-		selection.x--;
+		// first is index
+		// second is disance
+		std::pair<int, int> closest = std::make_pair(0, 100);
+		int index = 0;
+		for (auto &e : elements) {
+			if (e->getX() < selection.x) {
+				int range = selection.x - selection.x;
+				if (range < closest.second) {
+					closest = std::make_pair(index, range);
+				}
+			}
+			index++;
+		}
+		selection.x = elements[closest.first]->getX();
+		selection.y = elements[closest.first]->getY();
 	}
 
 	void curseWindow::movSelUp()
 	{
-		selection.y--;
+		// first is index
+		// second is disance
+		std::pair<int, int> closest = std::make_pair(0, 100);
+		int index = 0;
+		for (auto &e : elements) {
+			if (e->getY() < selection.y) {
+				int range = selection.y - e->getY();
+				if (range < closest.second) {
+					closest = std::make_pair(index, range);
+				}
+			}
+			index++;
+		}
+		selection.y = elements[closest.first]->getY();
+		selection.x = elements[closest.first]->getX();
 	}
 
 	void curseWindow::movSelDown()
 	{
-		selection.y++;
+		// first is index
+		// second is disance
+		std::pair<int, int> closest = std::make_pair(0, 100);
+		int index = 0;
+		for (auto &e : elements) {
+			if (e->getY() > selection.y) {
+				int range = e->getY() - selection.y;
+				if (range < closest.second) {
+					closest = std::make_pair(index, range);
+				}
+			}
+			index++;
+		}
+		selection.y = elements[closest.first]->getY();
+		selection.x = elements[closest.first]->getX();
 	}
 
 	char curseWindow::getKey()

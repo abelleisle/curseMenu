@@ -3,6 +3,10 @@
 
 using namespace curseMenu;
 
+int niceMeme = 123;
+float goodMeme = 0.0f;
+std::string stringMeme;
+
 int main(int argc, char** argv)
 {
 	(void)argc;
@@ -10,7 +14,7 @@ int main(int argc, char** argv)
 
 	bool running = true;
 	
-	initCurses(CURSES_NOECHO | CURSES_CBREAK | CURSES_KEYPAD);	
+	initCurses(CURSES_NOECHO | CURSES_CBREAK | CURSES_KEYPAD | CURSES_RAW);	
 	setBackground(COLOR_BLUE);
 
 	curseWindow mainWindow;
@@ -29,14 +33,20 @@ int main(int argc, char** argv)
 	curseButton Option1;
 	curseButton Option2;
 	curseButton Option3;
+	curseButton Option4;
+	curseButton Option5;
 
-	Option1.onTrigger([&]{dataEntry::textBox<int>("Enter integer here");});
+	Option1.onTrigger([&]{niceMeme = dataEntry::textBox<int>("Enter integer here");});
 	Option2.onTrigger([&running]{running = false;});	
-	Option3.onTrigger([&]{mainWindow.putText(7, 2, "Clicked");});
-	
+	Option3.onTrigger([&]{goodMeme = dataEntry::textBox<float>("Enter float here");});
+	Option4.onTrigger([&]{stringMeme = dataEntry::textBox<std::string>("String:");});
+
 	mainWindow.createButton(Option1, 10, 10, "First Option");
 	mainWindow.createButton(Option2, 11, 10, "Cacner");
 	mainWindow.createButton(Option3, 12, 10, "This is a button");
+	mainWindow.createButton(Option4, 13, 10, "String");
+
+	mainWindow.createButton(Option5, 11, 20, "Right");
 
 	globalUpdate();
 	mainWindow.update();
@@ -45,6 +55,12 @@ int main(int argc, char** argv)
 	while (running) {
 		ch = mainWindow.getKey();
 		switch (ch) {
+		case 97:
+			mainWindow.movSelLeft();
+			break;
+		case 100:
+			mainWindow.movSelRight();
+			break;
 		case 115:
 			mainWindow.movSelDown();
 			break;
@@ -61,6 +77,11 @@ int main(int argc, char** argv)
 		default:break;
 		}
 		
+		mainWindow.putText(8,2,std::to_string(niceMeme));
+		mainWindow.putText(9,2,std::to_string(goodMeme));
+		mainWindow.putText(9,14,stringMeme);
+		
+		globalUpdate();
 		mainWindow.update();	
 	}
 
